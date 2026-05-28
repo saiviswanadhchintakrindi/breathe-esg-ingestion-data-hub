@@ -5,7 +5,7 @@ from ingestion.views import (
     NormalizedRecordViewSet, AuditLogViewSet, IngestAPIView, DashboardSummaryView
 )
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register(r'organizations', OrganizationViewSet, basename='organization')
 router.register(r'facilities', FacilityViewSet, basename='facility')
 router.register(r'raw-sources', RawIngestionSourceViewSet, basename='raw-source')
@@ -17,3 +17,4 @@ urlpatterns = [
     path('ingest/', IngestAPIView.as_view(), name='api-ingest'),
     path('dashboard-summary/', DashboardSummaryView.as_view(), name='api-dashboard-summary'),
 ]
+
