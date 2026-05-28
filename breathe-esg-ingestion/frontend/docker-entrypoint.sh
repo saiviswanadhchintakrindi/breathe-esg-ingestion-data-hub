@@ -1,19 +1,25 @@
 #!/bin/sh
 set -e
 
-# BACKEND_URL should be the Railway internal URL:
-# http://<backend-service-name>.railway.internal:<PORT>
-# e.g. http://backend.railway.internal:8000
+# Railway assigns PORT dynamically — must listen on it
+APP_PORT="${PORT:-3000}"
+echo "=== Nginx listening on port: $APP_PORT ==="
+
+# Ensure BACKEND_URL has a scheme
 BACKEND="${BACKEND_URL:-http://localhost:8000}"
-
-# Strip trailing slash
+case "$BACKEND" in
+  http://*|https://*) ;;
+  *) BACKEND="http://$BACKEND" ;;
+esac
 BACKEND="${BACKEND%/}"
-
 echo "=== Proxying /api/ to: $BACKEND ==="
 
-sed -e "s|BACKEND_URL_PLACEHOLDER|${BACKEND}|g" \
-    /etc/nginx/templates/default.conf.template \
-    > /etc/nginx/conf.d/default.conf
+# Substitute both placeholders
+sed \
+  -e "s|PORT_PLACEHOLDER|${APP_PORT}|g" \
+  -e "s|BACKEND_URL_PLACEHOLDER|${BACKEND}|g" \
+  /etc/nginx/templates/default.conf.template \
+  > /etc/nginx/conf.d/default.conf
 
 echo "=== Final nginx config ==="
 cat /etc/nginx/conf.d/default.conf
