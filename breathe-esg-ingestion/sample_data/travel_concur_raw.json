@@ -1,0 +1,94 @@
+[
+  {
+    "trip_id": "TRIP-2025-001",
+    "employee_id": "EMP-412",
+    "booking_date": "2025-11-03",
+    "segments": [
+      {
+        "type": "flight",
+        "origin": "SFO",
+        "destination": "JFK",
+        "cabin_class": "business",
+        "distance_km": null
+      },
+      {
+        "type": "hotel",
+        "city": "New York",
+        "country": "US",
+        "room_nights": 4
+      },
+      {
+        "type": "ground",
+        "transport_type": "taxi",
+        "distance_km": 24.5,
+        "spend_usd": 75.0
+      }
+    ]
+  },
+  {
+    "trip_id": "TRIP-2025-002",
+    "employee_id": "EMP-881",
+    "booking_date": "2025-11-10",
+    "segments": [
+      {
+        "type": "flight",
+        "origin": "LHR",
+        "destination": "FRA",
+        "cabin_class": "economy",
+        "distance_km": null
+      },
+      {
+        "type": "hotel",
+        "city": "Frankfurt",
+        "country": "DE",
+        "room_nights": 2
+      },
+      {
+        "type": "ground",
+        "transport_type": "train",
+        "distance_km": null,
+        "spend_usd": 45.0
+      }
+    ]
+  },
+  {
+    "trip_id": "TRIP-2025-003",
+    "employee_id": "EMP-105",
+    "booking_date": "2025-11-15",
+    "segments": [
+      {
+        "type": "flight",
+        "origin": "SFO",
+        "destination": "FRA",
+        "cabin_class": "first",
+        "distance_km": 9150.0
+      },
+      {
+        "type": "hotel",
+        "city": "Frankfurt",
+        "country": "DE",
+        "room_nights": 0
+      },
+      {
+        "type": "ground",
+        "transport_type": "helicopter",
+        "distance_km": null,
+        "spend_usd": null
+      }
+    ]
+  },
+  {
+    "trip_id": "TRIP-2025-004",
+    "employee_id": "EMP-007",
+    "booking_date": "2025-11-20",
+    "segments": [
+      {
+        "type": "flight",
+        "origin": "SFO",
+        "destination": "XYZ",
+        "cabin_class": "economy",
+        "distance_km": null
+      }
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+| BELNR | BUDAT | MATNR | TXZ01 | MENGE | MEINS | DMBTR | WAERS | WERKS | LIFNR |
+| 100021 | 12.10.2025 | M-102 | Fuel Oil (Heizöl) | 4500.00 | Ltr | 5850.00 | EUR | 1000 | VEND-998 |
+| 100022 | 15.10.2025 | M-201 | IT Server Equipment | 3.00 | St | 12500.00 | USD | 1100 | VEND-501 |
+| 100023 | 20.10.2025 | M-101 | Diesel Kraftstoff | 2000.00 | Ltr | 2400.00 | EUR | 1000 | VEND-998 |
+| 100024 | 22.10.2025 | M-503 | Consulting Services | 1.00 | Stk | 15000.00 | EUR | 1000 | VEND-221 |
+| 100025 | 24.10.2025 | M-101 | Diesel Kraftstoff | -500.00 | Ltr | -600.00 | EUR | 1000 | VEND-998 |
+| 100026 | 28.10.2025 | M-101 | Diesel Kraftstoff | 1500.00 | Ltr | 1800.00 | EUR | 9999 | VEND-998 |
+| 100027 | 32.10.2025 | M-101 | Diesel Kraftstoff | 800.00 | Ltr | 960.00 | EUR | 1100 | VEND-998 |
+| 100028 | 01.11.2025 | M-404 | Office Printing Paper | 150.00 | kg | 450.00 | USD | 1100 | VEND-112 |
+| 100029 | 05.11.2025 | M-102 | Fuel Oil (Heizöl) | 3.00 | to | 3300.00 | EUR | 1000 | VEND-998 |

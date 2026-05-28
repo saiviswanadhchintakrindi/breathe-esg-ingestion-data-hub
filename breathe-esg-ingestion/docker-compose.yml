@@ -1,0 +1,27 @@
+version: '3.8'
+
+# Local development only — Railway uses individual Dockerfiles
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=True
+      - SECRET_KEY=local-dev-secret-key
+      - CORS_ALLOW_ALL_ORIGINS=True
+    command: python manage.py runserver 0.0.0.0:8000
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
