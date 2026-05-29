@@ -1,8 +1,8 @@
-from datetime import datetime
 import json
+from datetime import datetime
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import Sum, Count, F, Q
+from django.db.models import Sum, Count, F
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from rest_framework import viewsets, status, generics
@@ -79,10 +79,10 @@ class NormalizedRecordViewSet(viewsets.ModelViewSet):
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(
-                Q(category__icontains=search) | 
-                Q(activity_type__icontains=search) |
-                Q(anomalies__icontains=search) |
-                Q(comments__icontains=search)
+                models.Q(category__icontains=search) | 
+                models.Q(activity_type__icontains=search) |
+                models.Q(anomalies__icontains=search) |
+                models.Q(comments__icontains=search)
             )
             
         return queryset.order_by('-activity_date')
@@ -258,6 +258,7 @@ class IngestAPIView(APIView):
                 )
             filename = uploaded_file.name
             try:
+                # Read file payload
                 raw_payload = uploaded_file.read().decode('utf-8')
             except Exception as e:
                 return Response(
@@ -265,12 +266,14 @@ class IngestAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         elif source_type == 'TRAVEL':
+            # Travel is a simulated API pull. We can read it from JSON request
             raw_payload = request.data.get('raw_payload')
             if not raw_payload:
                 return Response(
                     {"error": "raw_payload field is required for Travel JSON API Simulation."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            # If they pass a JSON object, convert to string
             if not isinstance(raw_payload, str):
                 raw_payload = json.dumps(raw_payload)
             filename = "simulated_api_concur_pull.json"
@@ -280,15 +283,17 @@ class IngestAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
             
+        # 1. Store Raw Payload as Source of Truth
         raw_source = RawIngestionSource.objects.create(
             organization=organization,
             source_type=source_type,
             filename=filename,
             raw_payload=raw_payload,
-            status='SUCCESS',
+            status='SUCCESS', # Defaults, parser will modify
             ingested_by=request.user if request.user.is_authenticated else None
         )
         
+        # 2. Invoke appropriate parser synchronously for UI immediate response
         try:
             if source_type == 'SAP':
                 parse_sap_export(raw_source)
@@ -309,6 +314,7 @@ class IngestAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
+        # Re-fetch raw source to get updated processing logs/stats
         raw_source.refresh_from_db()
         
         return Response({
@@ -327,18 +333,22 @@ class DashboardSummaryView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
             
+        # Filter active organization records (excluding FAILED ones from statistics)
         base_records = NormalizedRecord.objects.filter(organization_id=org_id)
         valid_records = base_records.exclude(status='FAILED')
         
+        # KPI calculations
         total_emissions = valid_records.aggregate(total=Sum('emissions_tco2e'))['total'] or Decimal('0')
         total_approved = valid_records.filter(status='APPROVED').aggregate(total=Sum('emissions_tco2e'))['total'] or Decimal('0')
         
         record_counts = base_records.values('status').annotate(count=Count('id'))
         counts_dict = {item['status']: item['count'] for item in record_counts}
         
+        # Scope breakdown
         scope_breakdown = valid_records.values('scope').annotate(emissions=Sum('emissions_tco2e')).order_by('scope')
         scope_data = {f"Scope {item['scope']}": item['emissions'] for item in scope_breakdown}
         
+        # Facility breakdown
         facility_breakdown = valid_records.values(
             fac_id=F('facility__id'), 
             facility_name=F('facility__name')
@@ -355,6 +365,7 @@ class DashboardSummaryView(APIView):
             for f in facility_breakdown
         ]
         
+        # Category breakdown
         category_breakdown = valid_records.values('category').annotate(
             emissions=Sum('emissions_tco2e')
         ).order_by('-emissions')
@@ -364,6 +375,8 @@ class DashboardSummaryView(APIView):
             for c in category_breakdown
         ]
         
+        # Historical Trend (Pro-rated allocations grouped by month)
+        # Using TruncMonth to aggregate across dates
         monthly_trend = valid_records.annotate(
             month=TruncMonth('activity_date')
         ).values('month').annotate(
