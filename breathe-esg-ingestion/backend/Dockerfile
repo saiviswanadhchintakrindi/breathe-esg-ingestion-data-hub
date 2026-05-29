@@ -13,9 +13,6 @@ COPY . .
 
 RUN python manage.py collectstatic --noinput
 
-COPY start.sh .
 RUN chmod +x start.sh
 
-EXPOSE 8000
-
-CMD ["./start.sh"]
+CMD ["bash", "start.sh"]
