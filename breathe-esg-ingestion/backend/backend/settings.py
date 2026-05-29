@@ -82,6 +82,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+# Railway reverse-proxy settings — required to avoid 400 Bad Request
+# Railway terminates TLS and forwards requests over HTTP internally.
+# Without these, Django's SecurityMiddleware rejects the Host header.
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # CSRF — trust Railway domains
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
