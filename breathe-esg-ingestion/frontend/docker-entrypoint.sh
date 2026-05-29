@@ -12,9 +12,14 @@ esac
 BACKEND="${BACKEND%/}"
 echo "=== Proxying /api/ to: $BACKEND ==="
 
+# Extract hostname for the Host header (strip protocol)
+BACKEND_HOST=$(echo "$BACKEND" | sed 's|https\?://||' | sed 's|/.*||')
+echo "=== Backend host: $BACKEND_HOST ==="
+
 sed \
   -e "s|PORT_PLACEHOLDER|${APP_PORT}|g" \
   -e "s|BACKEND_URL_PLACEHOLDER|${BACKEND}|g" \
+  -e "s|BACKEND_HOST_PLACEHOLDER|${BACKEND_HOST}|g" \
   /etc/nginx/templates/default.conf.template \
   > /etc/nginx/conf.d/default.conf
 
