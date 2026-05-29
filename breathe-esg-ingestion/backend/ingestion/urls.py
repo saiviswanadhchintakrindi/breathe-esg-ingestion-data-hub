@@ -5,7 +5,7 @@ from ingestion.views import (
     NormalizedRecordViewSet, AuditLogViewSet, IngestAPIView, DashboardSummaryView
 )
 
-router = SimpleRouter(trailing_slash=False)
+router = SimpleRouter(trailing_slash=True)
 router.register(r'organizations', OrganizationViewSet, basename='organization')
 router.register(r'facilities', FacilityViewSet, basename='facility')
 router.register(r'raw-sources', RawIngestionSourceViewSet, basename='raw-source')
