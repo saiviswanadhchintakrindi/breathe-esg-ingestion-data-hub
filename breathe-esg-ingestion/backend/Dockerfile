@@ -11,8 +11,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python manage.py collectstatic --noinput
+# collectstatic needs a SECRET_KEY at build time; use a dummy — it's never exposed
+RUN SECRET_KEY=build-time-static-collection-only python manage.py collectstatic --noinput
 
 RUN chmod +x start.sh
 
 CMD ["bash", "start.sh"]
+
