@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import Sum, Count, F
+from django.db.models import Sum, Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from rest_framework import viewsets, status, generics
