@@ -1,16 +1,19 @@
-from django.contrib import admin
 from django.urls import path, include
-from django.http import JsonResponse, HttpResponseRedirect
+from rest_framework.routers import SimpleRouter
+from ingestion.views import (
+    OrganizationViewSet, FacilityViewSet, RawIngestionSourceViewSet,
+    NormalizedRecordViewSet, AuditLogViewSet, IngestAPIView, DashboardSummaryView
+)
 
-def health(request):
-    return JsonResponse({"status": "ok"})
-
-def root(request):
-    return HttpResponseRedirect('/health/')
+router = SimpleRouter(trailing_slash=False)
+router.register(r'organizations', OrganizationViewSet, basename='organization')
+router.register(r'facilities', FacilityViewSet, basename='facility')
+router.register(r'raw-sources', RawIngestionSourceViewSet, basename='raw-source')
+router.register(r'records', NormalizedRecordViewSet, basename='record')
+router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
 
 urlpatterns = [
-    path('', root),
-    path('health/', health),
-    path('admin/', admin.site.urls),
-    path('api/', include('ingestion.urls')),
+    path('', include(router.urls)),
+    path('ingest/', IngestAPIView.as_view(), name='api-ingest'),
+    path('dashboard-summary/', DashboardSummaryView.as_view(), name='api-dashboard-summary'),
 ]
