@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
   Upload, Database, Shield, AlertTriangle, CheckCircle, XCircle, 
-  Search, Filter, Edit2, Check, RefreshCw, BarChart2, Eye, Info, Clock, Trash2
+  Search, Filter, Edit2, Check, RefreshCw, BarChart2, Eye, Info, Clock,
+  PlusCircle, Trash2
 } from 'lucide-react'
 
 // Backend API Base URL
@@ -46,19 +47,39 @@ export default function App() {
   // Reload trigger
   const [reloadTrigger, setReloadTrigger] = useState(0)
 
-  // Fetch initial organizations
-  useEffect(() => {
+  // New client creation state
+  const [showNewOrgForm, setShowNewOrgForm] = useState(false)
+  const [newOrgName, setNewOrgName] = useState('')
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false)
+
+  // Clear data / delete environment confirmation dialogs
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [isClearingData, setIsClearingData] = useState(false)
+  const [showDeleteOrgConfirm, setShowDeleteOrgConfirm] = useState(false)
+  const [isDeletingOrg, setIsDeletingOrg] = useState(false)
+
+  // Fetch organizations (refetchable)
+  const fetchOrganizations = () => {
     fetch(`${API_BASE}/organizations/`)
       .then(res => res.json())
       .then(data => {
         setOrganizations(data)
         if (data.length > 0) {
-          // Keep default 1 if exists, else first org
-          const hasSeeded = data.find(o => o.id === 1)
-          setActiveOrg(hasSeeded ? 1 : data[0].id)
+          // Keep current active if still exists, else first org
+          const stillExists = data.find(o => o.id === activeOrg)
+          if (!stillExists) {
+            setActiveOrg(data[0].id)
+          }
+        } else {
+          setActiveOrg(null)
         }
       })
       .catch(err => console.error("Error fetching organizations:", err))
+  }
+
+  // Initial load
+  useEffect(() => {
+    fetchOrganizations()
   }, [])
 
   // Fetch data on active tenant or reload trigger change
@@ -108,22 +129,6 @@ export default function App() {
       })
       .catch(err => console.error("Error fetching records:", err))
   }, [activeOrg, scopeFilter, statusFilter, sourceFilter, facilityFilter, searchQuery, reloadTrigger])
-
-  const handleDelete = (recordId) => {
-    if (!window.confirm('Are you sure you want to delete this record? This cannot be undone.')) return
-    fetch(`${API_BASE}/records/${recordId}/delete/`, {
-      method: 'DELETE',
-    })
-      .then(async res => {
-        const data = await res.json()
-        if (res.ok) {
-          setReloadTrigger(p => p + 1)
-        } else {
-          alert(data.error || 'Delete failed')
-        }
-      })
-      .catch(err => console.error('Delete error:', err))
-  }
 
   // Handle file ingestion
   const handleUploadSubmit = (e) => {
@@ -316,6 +321,81 @@ export default function App() {
     return cookieValue;
   }
 
+  // Create New Client Environment
+  const handleCreateOrg = (e) => {
+    e.preventDefault()
+    if (!newOrgName.trim()) return
+    setIsCreatingOrg(true)
+    fetch(`${API_BASE}/organizations/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newOrgName.trim() })
+    })
+      .then(async res => {
+        const data = await res.json()
+        if (res.ok) {
+          setNewOrgName('')
+          setShowNewOrgForm(false)
+          // Refresh org list and switch to new org
+          fetchOrganizations()
+          setActiveOrg(data.id)
+        } else {
+          alert(data.name ? data.name.join(', ') : 'Failed to create environment.')
+        }
+      })
+      .catch(err => {
+        console.error('Create org error:', err)
+        alert('Network error creating environment.')
+      })
+      .finally(() => setIsCreatingOrg(false))
+  }
+
+  // Clear All Data for Active Environment
+  const handleClearAllData = () => {
+    setIsClearingData(true)
+    fetch(`${API_BASE}/records/clear-all/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ org_id: activeOrg })
+    })
+      .then(async res => {
+        if (res.ok) {
+          setShowClearConfirm(false)
+          setReloadTrigger(prev => prev + 1)
+        } else {
+          const data = await res.json()
+          alert(data.error || 'Failed to clear data.')
+        }
+      })
+      .catch(err => {
+        console.error('Clear data error:', err)
+        alert('Network error clearing data.')
+      })
+      .finally(() => setIsClearingData(false))
+  }
+
+  // Delete Entire Client Environment
+  const handleDeleteOrg = () => {
+    setIsDeletingOrg(true)
+    fetch(`${API_BASE}/organizations/${activeOrg}/`, {
+      method: 'DELETE'
+    })
+      .then(async res => {
+        if (res.ok || res.status === 204) {
+          setShowDeleteOrgConfirm(false)
+          fetchOrganizations()
+        } else {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || 'Failed to delete environment.')
+        }
+      })
+      .catch(err => {
+        console.error('Delete org error:', err)
+        alert('Network error deleting environment.')
+      })
+      .finally(() => setIsDeletingOrg(false))
+  }
+
   // Format Helper functions
   const formatNumber = (num, decimals = 2) => {
     if (num === null || num === undefined) return '0.00'
@@ -375,14 +455,71 @@ export default function App() {
             <span className="form-label" style={{ margin: 0 }}>Client Environment:</span>
             <select 
               className="tenant-selector"
-              value={activeOrg}
+              value={activeOrg || ''}
               onChange={(e) => setActiveOrg(Number(e.target.value))}
             >
+              {organizations.length === 0 && <option value="">No environments</option>}
               {organizations.map(org => (
                 <option key={org.id} value={org.id}>{org.name}</option>
               ))}
             </select>
+            
+            {/* Create New Client Button */}
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setShowNewOrgForm(!showNewOrgForm)}
+              title="Create a new client environment"
+              style={{ padding: '0.35rem 0.5rem', borderRadius: 'var(--radius-md)' }}
+            >
+              <PlusCircle size={16} />
+            </button>
           </div>
+
+          {/* Inline New Org Form */}
+          {showNewOrgForm && (
+            <form 
+              onSubmit={handleCreateOrg}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.4rem 0.6rem',
+                background: 'rgba(16,185,129,0.08)',
+                border: '1px solid rgba(16,185,129,0.25)',
+                borderRadius: 'var(--radius-md)',
+                animation: 'fadeIn 0.2s ease'
+              }}
+            >
+              <input
+                type="text"
+                className="form-input"
+                placeholder="New client name..."
+                value={newOrgName}
+                onChange={(e) => setNewOrgName(e.target.value)}
+                autoFocus
+                style={{ 
+                  fontSize: '0.8rem', padding: '0.3rem 0.6rem', 
+                  width: '180px', margin: 0,
+                  background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)'
+                }}
+              />
+              <button 
+                type="submit" 
+                className="btn btn-primary btn-sm"
+                disabled={isCreatingOrg || !newOrgName.trim()}
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+              >
+                {isCreatingOrg ? <RefreshCw className="animate-spin" size={12} /> : <CheckCircle size={12} />}
+                {isCreatingOrg ? ' Creating...' : ' Create'}
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-secondary btn-sm"
+                onClick={() => { setShowNewOrgForm(false); setNewOrgName(''); }}
+                style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+              >
+                <XCircle size={12} />
+              </button>
+            </form>
+          )}
         </div>
       </header>
 
@@ -579,13 +716,50 @@ export default function App() {
             </button>
           </div>
           
-          <button 
-            className="btn btn-secondary btn-sm" 
-            onClick={() => setReloadTrigger(p => p + 1)}
-            title="Refresh Ingested Data"
-          >
-            <RefreshCw size={14} /> Refresh Data
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button 
+              className="btn btn-secondary btn-sm" 
+              onClick={() => setReloadTrigger(p => p + 1)}
+              title="Refresh Ingested Data"
+            >
+              <RefreshCw size={14} /> Refresh Data
+            </button>
+            
+            <button 
+              className="btn btn-sm" 
+              onClick={() => setShowClearConfirm(true)}
+              title="Clear all ingested records, sources, and audit logs for this client"
+              style={{ 
+                background: 'rgba(245,158,11,0.1)', 
+                border: '1px solid rgba(245,158,11,0.3)', 
+                color: '#f59e0b',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                padding: '0.35rem 0.6rem', borderRadius: 'var(--radius-md)',
+                fontSize: '0.8rem', fontWeight: 500
+              }}
+            >
+              <Trash2 size={13} /> Clear Data
+            </button>
+
+            <button 
+              className="btn btn-sm" 
+              onClick={() => setShowDeleteOrgConfirm(true)}
+              title="Permanently delete this client environment"
+              disabled={organizations.length <= 1}
+              style={{ 
+                background: 'rgba(239,68,68,0.1)', 
+                border: '1px solid rgba(239,68,68,0.3)', 
+                color: organizations.length <= 1 ? 'rgba(239,68,68,0.3)' : '#ef4444',
+                cursor: organizations.length <= 1 ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                padding: '0.35rem 0.6rem', borderRadius: 'var(--radius-md)',
+                fontSize: '0.8rem', fontWeight: 500
+              }}
+            >
+              <Trash2 size={13} /> Delete Environment
+            </button>
+          </div>
         </div>
 
         {/* VIEW 1: ACTIVITY LEDGER */}
@@ -686,7 +860,6 @@ export default function App() {
                     <th>Normalized Ingestion</th>
                     <th>Footprint</th>
                     <th>Status</th>
-                    <th>Environment</th>
                     <th>Audit Action</th>
                   </tr>
                 </thead>
@@ -748,15 +921,6 @@ export default function App() {
                             {formatNumber(rec.emissions_tco2e, 4)} t
                           </td>
                           <td>{getStatusBadge(rec.status)}</td>
-                          <td>
-                            {rec.client_environment ? (
-                              <span style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', backgroundColor: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)', whiteSpace: 'nowrap' }}>
-                                {rec.client_environment}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
-                            )}
-                          </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <button 
@@ -775,16 +939,6 @@ export default function App() {
                                   title="Sign off and Lock for audit"
                                 >
                                   <Check size={14} /> Approve
-                                </button>
-                              )}
-                              {!rec.is_locked && (
-                                <button
-                                  className="btn btn-sm"
-                                  style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
-                                  onClick={() => handleDelete(rec.id)}
-                                  title="Delete this record permanently"
-                                >
-                                  <Trash2 size={14} />
                                 </button>
                               )}
                             </div>
@@ -1284,6 +1438,121 @@ export default function App() {
               </div>
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* CLEAR DATA CONFIRMATION MODAL */}
+      {showClearConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-slide" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertTriangle size={20} className="text-amber-500" /> Clear All Ingested Data
+              </h3>
+              <button 
+                style={{ background: 'none', border: 0, fontSize: '1.5rem', cursor: 'pointer', opacity: 0.5 }}
+                onClick={() => setShowClearConfirm(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="suspicious-alert" style={{ 
+                backgroundColor: 'rgba(245,158,11,0.06)', 
+                borderColor: 'rgba(245,158,11,0.2)' 
+              }}>
+                <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+                  This action will <b>permanently delete</b> all of the following for <b>"{organizations.find(o => o.id === activeOrg)?.name}"</b>:
+                  <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+                    <li>Normalized activity records</li>
+                    <li>Raw ingestion source logs</li>
+                    <li>Audit trail entries</li>
+                  </ul>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                The client environment and facilities will be preserved. You can re-ingest fresh data afterwards.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowClearConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn"
+                onClick={handleClearAllData}
+                disabled={isClearingData}
+                style={{ 
+                  background: 'rgba(245,158,11,0.15)', 
+                  border: '1px solid rgba(245,158,11,0.5)',
+                  color: '#f59e0b', fontWeight: 600 
+                }}
+              >
+                {isClearingData ? (
+                  <><RefreshCw className="animate-spin" size={14} /> Clearing...</>
+                ) : (
+                  <><Trash2 size={14} /> Clear All Data</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE ENVIRONMENT CONFIRMATION MODAL */}
+      {showDeleteOrgConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-slide" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertTriangle size={20} className="text-red-500" /> Delete Client Environment
+              </h3>
+              <button 
+                style={{ background: 'none', border: 0, fontSize: '1.5rem', cursor: 'pointer', opacity: 0.5 }}
+                onClick={() => setShowDeleteOrgConfirm(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="anomaly-alert">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                  <XCircle size={16} /> Destructive Action — Cannot Be Undone
+                </div>
+                <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+                  This will <b>permanently delete</b> the entire client environment <b>"{organizations.find(o => o.id === activeOrg)?.name}"</b>, including:
+                  <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+                    <li>All facilities & emission factor mappings</li>
+                    <li>All ingested records & raw sources</li>
+                    <li>All audit trail entries</li>
+                    <li>The organization profile itself</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowDeleteOrgConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleDeleteOrg}
+                disabled={isDeletingOrg}
+              >
+                {isDeletingOrg ? (
+                  <><RefreshCw className="animate-spin" size={14} /> Deleting...</>
+                ) : (
+                  <><Trash2 size={14} /> Delete Environment</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
