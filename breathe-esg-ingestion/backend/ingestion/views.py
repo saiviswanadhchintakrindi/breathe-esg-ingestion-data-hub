@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import Sum, Count, F, Q
+from django.db.models import Sum, Count, F, Q, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from rest_framework import viewsets, status, generics
@@ -227,6 +227,26 @@ class NormalizedRecordViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+
+    @action(detail=True, methods=['delete'], url_path='delete')
+    @transaction.atomic
+    def delete_record(self, request, pk=None):
+        instance = self.get_object()
+
+        if instance.is_locked:
+            return Response(
+                {"error": "Approved and locked records cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        record_id = instance.id
+        category = instance.category
+        activity_date = str(instance.activity_date)
+        instance.delete()
+
+        return Response({
+            "message": f"Record #{record_id} ({category} on {activity_date}) deleted successfully."
+        }, status=status.HTTP_200_OK)
 class IngestAPIView(APIView):
     def post(self, request, *args, **kwargs):
         org_id = request.data.get('organization_id')
