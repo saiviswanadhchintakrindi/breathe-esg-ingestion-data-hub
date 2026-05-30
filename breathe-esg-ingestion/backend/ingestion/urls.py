@@ -1,11 +1,11 @@
 from django.urls import path, include
-from rest_framework.routers import SimpleRouter
+from rest_framework.routers import DefaultRouter
 from ingestion.views import (
     OrganizationViewSet, FacilityViewSet, RawIngestionSourceViewSet,
     NormalizedRecordViewSet, AuditLogViewSet, IngestAPIView, DashboardSummaryView
 )
 
-router = SimpleRouter(trailing_slash=True)
+router = DefaultRouter()
 router.register(r'organizations', OrganizationViewSet, basename='organization')
 router.register(r'facilities', FacilityViewSet, basename='facility')
 router.register(r'raw-sources', RawIngestionSourceViewSet, basename='raw-source')
