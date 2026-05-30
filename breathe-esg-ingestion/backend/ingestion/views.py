@@ -77,7 +77,7 @@ class NormalizedRecordViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(facility_id=facility_id)
             
         search = self.request.query_params.get('search')
-       if search:
+        if search:
             queryset = queryset.filter(
                 Q(category__icontains=search) | 
                 Q(activity_type__icontains=search) |
