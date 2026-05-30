@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
   Upload, Database, Shield, AlertTriangle, CheckCircle, XCircle, 
-  Search, Filter, Edit2, Check, RefreshCw, BarChart2, Eye, Info, Clock
+  Search, Filter, Edit2, Check, RefreshCw, BarChart2, Eye, Info, Clock, Trash2
 } from 'lucide-react'
 
 // Backend API Base URL
@@ -108,6 +108,22 @@ export default function App() {
       })
       .catch(err => console.error("Error fetching records:", err))
   }, [activeOrg, scopeFilter, statusFilter, sourceFilter, facilityFilter, searchQuery, reloadTrigger])
+
+  const handleDelete = (recordId) => {
+    if (!window.confirm('Are you sure you want to delete this record? This cannot be undone.')) return
+    fetch(`${API_BASE}/records/${recordId}/delete/`, {
+      method: 'DELETE',
+    })
+      .then(async res => {
+        const data = await res.json()
+        if (res.ok) {
+          setReloadTrigger(p => p + 1)
+        } else {
+          alert(data.error || 'Delete failed')
+        }
+      })
+      .catch(err => console.error('Delete error:', err))
+  }
 
   // Handle file ingestion
   const handleUploadSubmit = (e) => {
@@ -670,6 +686,7 @@ export default function App() {
                     <th>Normalized Ingestion</th>
                     <th>Footprint</th>
                     <th>Status</th>
+                    <th>Environment</th>
                     <th>Audit Action</th>
                   </tr>
                 </thead>
@@ -731,6 +748,15 @@ export default function App() {
                             {formatNumber(rec.emissions_tco2e, 4)} t
                           </td>
                           <td>{getStatusBadge(rec.status)}</td>
+                          <td>
+                            {rec.client_environment ? (
+                              <span style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', backgroundColor: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)', whiteSpace: 'nowrap' }}>
+                                {rec.client_environment}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                            )}
+                          </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <button 
@@ -749,6 +775,16 @@ export default function App() {
                                   title="Sign off and Lock for audit"
                                 >
                                   <Check size={14} /> Approve
+                                </button>
+                              )}
+                              {!rec.is_locked && (
+                                <button
+                                  className="btn btn-sm"
+                                  style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
+                                  onClick={() => handleDelete(rec.id)}
+                                  title="Delete this record permanently"
+                                >
+                                  <Trash2 size={14} />
                                 </button>
                               )}
                             </div>
