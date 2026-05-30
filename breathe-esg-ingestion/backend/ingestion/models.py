@@ -124,6 +124,7 @@ class NormalizedRecord(models.Model):
     reviewed_at = models.DateTimeField(null=True, blank=True)
     is_edited = models.BooleanField(default=False, help_text="Flagged if values were updated manually after ingestion")
     comments = models.TextField(blank=True, null=True, help_text="Analyst commentary or explanation for edits")
+    client_environment = models.CharField(max_length=100, blank=True, null=True, help_text="Client environment tag e.g. Production, Staging, Dev, UAT")
 
     def __str__(self):
         return f"{self.category} ({self.activity_date}) - {self.emissions_tco2e} tCO2e"
