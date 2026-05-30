@@ -77,12 +77,12 @@ class NormalizedRecordViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(facility_id=facility_id)
             
         search = self.request.query_params.get('search')
-        if search:
+       if search:
             queryset = queryset.filter(
-Q(category__icontains=search) | 
-Q(activity_type__icontains=search) |
-Q(anomalies__icontains=search) |
-Q(comments__icontains=search)
+                Q(category__icontains=search) | 
+                Q(activity_type__icontains=search) |
+                Q(anomalies__icontains=search) |
+                Q(comments__icontains=search)
             )
             
         return queryset.order_by('-activity_date')
