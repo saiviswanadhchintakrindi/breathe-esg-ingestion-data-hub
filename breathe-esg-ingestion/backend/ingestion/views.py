@@ -225,8 +225,8 @@ class NormalizedRecordViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
-        from django.db import transaction
-        @action(detail=False, methods=['post'], url_path='clear-all')
+       
+    @action(detail=False, methods=['post'], url_path='clear-all')
     @transaction.atomic
     def clear_all(self, request):
         org_id = request.data.get('org_id')
