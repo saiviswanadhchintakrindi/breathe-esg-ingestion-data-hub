@@ -225,6 +225,46 @@ class NormalizedRecordViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+        from django.db import transaction
+
+@action(detail=False, methods=['post'], url_path='clear-all')
+@transaction.atomic
+def clear_all(self, request):
+    org_id = request.data.get('org_id')
+
+    if not org_id:
+        return Response(
+            {"error": "org_id is required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        organization = Organization.objects.get(id=org_id)
+    except Organization.DoesNotExist:
+        return Response(
+            {"error": "Organization not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    records_deleted = NormalizedRecord.objects.filter(
+        organization=organization
+    ).delete()[0]
+
+    raw_sources_deleted = RawIngestionSource.objects.filter(
+        organization=organization
+    ).delete()[0]
+
+    audit_logs_deleted = AuditLog.objects.filter(
+        organization=organization
+    ).delete()[0]
+
+    return Response({
+        "success": True,
+        "message": "All data cleared successfully.",
+        "records_deleted": records_deleted,
+        "raw_sources_deleted": raw_sources_deleted,
+        "audit_logs_deleted": audit_logs_deleted
+    })
 
 
 class IngestAPIView(APIView):
